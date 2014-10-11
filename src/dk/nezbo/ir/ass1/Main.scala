@@ -2,12 +2,19 @@ package dk.nezbo.ir.ass1
 
 import ch.ethz.dal.tinyir.io.TipsterStream
 import ch.ethz.dal.tinyir.processing.XMLDocument
+import ch.ethz.dal.tinyir.processing.Tokenizer
 import scala.collection.mutable.ListBuffer
 import com.github.aztek.porterstemmer.PorterStemmer
+import scala.collection.mutable.PriorityQueue
+import scala.Ordering
 
 object Main  {
 
   def main(args: Array[String]) {
+    // prepare queries
+    val queries = args.map(q => Tokenizer.tokenize(q.toLowerCase()).map(PorterStemmer.stem(_))).toList
+    println(queries)
+    
     val t0 = System.nanoTime()
     val tipster = new TipsterStream ("./tipster/zips/")  
     println("Number of files in zips = " + tipster.length)
@@ -16,41 +23,37 @@ object Main  {
     println("Time elapsed: "+(t1-t0)/1000000000.0+" s")
 
     var i = 0
-    val words = ListBuffer.empty[String] // the words at their location
-    val dfs = ListBuffer.empty[(Int,List[Int])] //List[(Int,List[Int])]
-    for (doc <- tipster.stream.take(100)) { 
+    //val tfs = ListBuffer.empty[(Int,Map[String,Int])]
+    var topscores : List[List[(String,Double)]] = queries.map(q => List(("nothing",-1.0)))
+    
+    for (doc <- tipster.stream.take(100000)) { 
       if(i % 1000 == 0) println(i+" files done.")
       
       // DO THINGS HERE
-      dfs += ((doc.ID,getWordFrequencies(doc,words)))
+      //tfs += ((doc.ID,getTermFrequencies(doc)))
+      topscores = topscores.zipWithIndex.map(i => (i._1  :+ (doc.name,getTermScore(doc,queries(i._2)))).sortBy(d => -d._2).take(10))
       
       i += 1
     }
+    //println(topscores)
     val t2 = System.nanoTime()
-    println(words)
-    println(dfs)
     println("\nTime elapsed: "+(t2-t0)/1000000000.0+" s")
   }
   
-  def getWordFrequencies(doc : XMLDocument, old_words : ListBuffer[String]) : List[Int] = {
-    val result = ListBuffer.empty[Int]
-    val frequencies = doc.tokens.groupBy(identity).map(kv => (kv._1,kv._2.length))
+  def getTermScore(doc : XMLDocument, qterms : List[String]) : Double = {
+    val tfs = getTermFrequencies(doc)
     
-    // handle old words
-    for(word <- old_words){
-       if(frequencies.contains(word)) {
-         result += frequencies(word)
-       } else {
-         result += 0
-       }
-    }
-    
-    // new ones
-    for(kv <- frequencies.filter(kv => !old_words.contains(kv._1))) {
-      old_words += kv._1
-      result += kv._2
-    }
-    
-    result.toList
+    val qtfs = qterms.flatMap(q => tfs.get(q))
+	val numTermsInCommon = qtfs.filter(_ > 0).length
+	val docEuLen = tfs.values.map(x => x * x).sum.toDouble
+	val queryLen = qterms.length.toDouble
+	val termOverlap = qtfs.sum / (docEuLen * queryLen)
+	numTermsInCommon + termOverlap
   }
+  
+  def getTermFrequencies(doc : XMLDocument) : Map[String,Int] = {
+    doc.tokens.map(PorterStemmer.stem(_)).groupBy(identity).mapValues(v => v.length)
+  }
+  
+  def ordering(row : (String,Double)) = row._2 
 }
