@@ -11,6 +11,8 @@ import javax.xml.parsers.DocumentBuilderFactory
 import scala.io.Source
 import org.w3c.dom.Document
 import ch.ethz.dal.tinyir.lectures.TipsterGroundTruth
+import dk.nezbo.ir.ass1.Utility.PrecRecInterpolation
+import ch.ethz.dal.tinyir.lectures.PrecisionRecall
 
 object Main  {
   
@@ -18,7 +20,7 @@ object Main  {
 
   def main(args: Array[String]) {
     // load topics
-    val topics = loadTopics
+    val topics = loadTopics.take(2)
     println(topics)
     
     // prepare queries
@@ -53,8 +55,22 @@ object Main  {
     val t2 = System.nanoTime()
     println("\nTime elapsed: "+(t2-t0)/1000000000.0+" s")
     
-    // compare relevance
-    val rel = new TipsterGroundTruth("qrels").judgements.get(51).get.toSet
+    // Compare relevance
+    val quality = new PrecRecInterpolation(11)
+    val judgements = new TipsterGroundTruth("tipster/qrels").judgements
+    
+    for(topic <- topics.zipWithIndex){
+      val id = topic._1._2
+      val name = topic._1._1
+      val index = topic._2
+      
+      val ranked = topscores(index).map(d => d._1).toList
+      val relev = judgements.get(id).get.toSet
+      
+      val precRecall = PrecisionRecall.evaluate(ranked.toSet, relev)
+      println(precRecall)
+      val interpolatedScore = quality.nAveragedPrecision(ranked, relev)
+    }
     
     val t3 = System.nanoTime()
     println("\nTime elapsed: "+(t3-t0)/1000000000.0+" s")
