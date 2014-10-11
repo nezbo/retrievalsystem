@@ -24,18 +24,21 @@ object Main  {
 
     var i = 0
     //val tfs = ListBuffer.empty[(Int,Map[String,Int])]
-    var topscores : List[List[(String,Double)]] = queries.map(q => List(("nothing",-1.0)))
+    val topscores = queries.map(q => new PriorityQueue[(String,Double)]()(Ordering.by(ordering)))
     
-    for (doc <- tipster.stream.take(100000)) { 
+    for (doc <- tipster.stream.take(1000)) {
       if(i % 1000 == 0) println(i+" files done.")
       
       // DO THINGS HERE
       //tfs += ((doc.ID,getTermFrequencies(doc)))
-      topscores = topscores.zipWithIndex.map(i => (i._1  :+ (doc.name,getTermScore(doc,queries(i._2)))).sortBy(d => -d._2).take(10))
+      for(i <- 0 until queries.length){
+        
+        topscores(i).enqueue((doc.name,getTermScore(doc,queries(i))))
+      }
       
       i += 1
     }
-    //println(topscores)
+    println(topscores.map(t => t.take(10)))
     val t2 = System.nanoTime()
     println("\nTime elapsed: "+(t2-t0)/1000000000.0+" s")
   }
