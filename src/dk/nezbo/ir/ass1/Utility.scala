@@ -14,7 +14,7 @@ object Utility {
     println("\nResult: "+result3)
     
     val result4 = inter.nAveragedPrecision((1 to 20), Set(21,22))
-    println("\nResult: "+result3)
+    println("\nResult: "+result4)
   }
 
 class PrecRecInterpolation(n : Int) {
@@ -31,7 +31,7 @@ class PrecRecInterpolation(n : Int) {
     println("Relev loc: "+this.relev(ranked,relev))
     println("Prec: "+prec)
     
-    val interp = this.interp(prec)
+    val interp = this.interp(prec).toList
     val precAtN = levels.map(n => this.precAt(n,interp))
     println(precAtN)
     precAtN.sum / n
@@ -54,7 +54,12 @@ class PrecRecInterpolation(n : Int) {
   }
   
   private def interp(p : Seq[Double]) : Seq[Double] = {
-    p.scanRight(0.0)((a,b) => Math.max(a, b)).dropRight(1)
+    if(p.length < 1) { 
+      List(0.0)
+      } else {
+        p.scanRight(0.0)((a,b) => Math.max(a, b)).dropRight(1)
+    }
+    
   }
 }
 }

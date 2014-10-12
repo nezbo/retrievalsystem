@@ -20,7 +20,7 @@ object Main  {
 
   def main(args: Array[String]) {
     // load topics
-    val topics = loadTopics.take(2)
+    val topics = loadTopics.drop(38).take(1)
     println(topics)
     
     // prepare queries
@@ -51,6 +51,7 @@ object Main  {
       i += 1
     }
     topscores = topscores.map(i => i.reverse)
+    topscores.foreach(println(_))
     
     val t2 = System.nanoTime()
     println("\nTime elapsed: "+(t2-t0)/1000000000.0+" s")
@@ -64,12 +65,20 @@ object Main  {
       val name = topic._1._1
       val index = topic._2
       
-      val ranked = topscores(index).map(d => d._1).toList
-      val relev = judgements.get(id).get.toSet
+      if(judgements.contains(id)){
+    	  println("Evaluating: "+name)
       
-      val precRecall = PrecisionRecall.evaluate(ranked.toSet, relev)
-      println(precRecall)
-      val interpolatedScore = quality.nAveragedPrecision(ranked, relev)
+	      val ranked = topscores(index).map(d => d._1).toList
+	      val relev = judgements.get(id).get.toSet
+	      
+	      val precRecall = PrecisionRecall.evaluate(ranked.toSet, relev)
+	      println(precRecall)
+	      val interpolatedScore = quality.nAveragedPrecision(ranked, relev)
+	      println("Score: "+interpolatedScore+"\n")
+      } else {
+        // print wanted output
+        topscores(index).toList.zipWithIndex.foreach(l => println(id+" "+(l._2+1)+" "+l._1._1))
+      }
     }
     
     val t3 = System.nanoTime()
