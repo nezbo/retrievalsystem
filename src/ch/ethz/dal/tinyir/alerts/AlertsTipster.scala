@@ -28,7 +28,7 @@ object AlertsTipster {
     sw.stop
     println("Stopped time = " + sw.stopped)
     alerts.results.foreach(println)  
-    val rel = new TipsterGroundTruth("qrels").judgements.get(51).get.toSet
+    val rel = new TipsterGroundTruth("tipster/qrels").judgements.get(51).get.toSet
     val ret = alerts.results.map(r => r.title)
     val pr = new PrecisionRecall(ret,rel)
     println(pr.relevIdx.mkString(" "))

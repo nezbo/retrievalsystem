@@ -9,56 +9,47 @@ import scala.collection.mutable.PriorityQueue
 import scala.Ordering
 import javax.xml.parsers.DocumentBuilderFactory
 import scala.io.Source
+import java.io.File
 import org.w3c.dom.Document
 import ch.ethz.dal.tinyir.lectures.TipsterGroundTruth
 import dk.nezbo.ir.ass1.Utility.PrecRecInterpolation
 import ch.ethz.dal.tinyir.lectures.PrecisionRecall
+import java.io.FileWriter
+import java.io.PrintWriter
 
 object Main  {
   
   val num_to_find = 100
+  val num_documents = 10000
+  val debug_print = true
+  val output_filename = "ranking-emil-jacobsen.run"
+  val rel_model = new TermFrequencyModel()
 
   def main(args: Array[String]) {
     // load topics
-    val topics = loadTopics.drop(38).take(1)
-    println(topics)
+    val topics = loadTopics.take(10) //.drop(39)
+    debug(topics)
     
     // prepare queries
     val queries = topics.map(_._1).map(q => Tokenizer.tokenize(q.toLowerCase()).map(PorterStemmer.stem(_))).toList
-    println(queries)
+    debug(queries)
     
     val t0 = System.nanoTime()
     val tipster = new TipsterStream ("./tipster/zips/")  
-    println("Number of files in zips = " + tipster.length)
+    debug("Number of files in zips = " + tipster.length)
     
     val t1 = System.nanoTime()
-    println("Time elapsed: "+(t1-t0)/1000000000.0+" s")
+    debug("Time elapsed: "+(t1-t0)/1000000000.0+" s")
 
-    var i = 0
-    var topscores = queries.map(q => new PriorityQueue[(String,Double)]()(Ordering.by(ordering)))
-    
-    for (doc <- tipster.stream.take(1000)) {
-      if(i % 1000 == 0) println(i+" files done.")
-      
-      // DO THINGS HERE
-      for(i <- 0 until queries.length){
-        
-        topscores(i).enqueue((doc.name,getTermScore(doc,queries(i))))
-        if(topscores(i).length > num_to_find)
-          topscores(i).dequeue
-      }
-      
-      i += 1
-    }
-    topscores = topscores.map(i => i.reverse)
-    topscores.foreach(println(_))
+	val topscores = rel_model.process(queries, tipster.stream.take(num_documents))
     
     val t2 = System.nanoTime()
-    println("\nTime elapsed: "+(t2-t0)/1000000000.0+" s")
+    debug("\nTime elapsed: "+(t2-t0)/1000000000.0+" s")
     
     // Compare relevance
     val quality = new PrecRecInterpolation(11)
     val judgements = new TipsterGroundTruth("tipster/qrels").judgements
+    val avgP = new ListBuffer[Double]()
     
     for(topic <- topics.zipWithIndex){
       val id = topic._1._2
@@ -66,23 +57,33 @@ object Main  {
       val index = topic._2
       
       if(judgements.contains(id)){
-    	  println("Evaluating: "+name)
+        // look at judgements and compare
+    	println("\nEvaluating: "+name)
       
-	      val ranked = topscores(index).map(d => d._1).toList
-	      val relev = judgements.get(id).get.toSet
+	    val ranked = topscores(index)
+	    val relev = judgements.get(id).get.toSet
 	      
-	      val precRecall = PrecisionRecall.evaluate(ranked.toSet, relev)
-	      println(precRecall)
-	      val interpolatedScore = quality.nAveragedPrecision(ranked, relev)
-	      println("Score: "+interpolatedScore+"\n")
+	    val precRecall = PrecisionRecall.evaluate(ranked.toSet, relev)
+	    println(precRecall)
+	    val avgPInterp = quality.nAveragedPrecision(ranked, relev)
+	    avgP += avgPInterp
+	    println("Average Interpolated Precision: "+avgPInterp)
       } else {
         // print wanted output
-        topscores(index).toList.zipWithIndex.foreach(l => println(id+" "+(l._2+1)+" "+l._1._1))
+        val fw = new FileWriter("./tipster/results/"+output_filename,true)
+        topscores(index).toList.zipWithIndex.foreach(l => fw.write(id+" "+(l._2+1)+" "+l._1 +"\n"))
+        fw.close()
       }
     }
     
+    // Mean Average Precision
+    if(!avgP.isEmpty){
+	  val map = avgP.sum / avgP.length
+      println("\nOverall Mean Average Precision: "+map)
+    }
+    
     val t3 = System.nanoTime()
-    println("\nTime elapsed: "+(t3-t0)/1000000000.0+" s")
+    debug("\nTime elapsed: "+(t3-t0)/1000000000.0+" s")
   }
   
   def loadTopics : List[(String,Int)] = {
@@ -93,20 +94,5 @@ object Main  {
     topics.zip(ids).toList
   }
   
-  def getTermScore(doc : XMLDocument, qterms : List[String]) : Double = {
-    val tfs = getTermFrequencies(doc)
-    
-    val qtfs = qterms.flatMap(q => tfs.get(q))
-	val numTermsInCommon = qtfs.filter(_ > 0).length
-	val docEuLen = tfs.values.map(x => x * x).sum.toDouble
-	val queryLen = qterms.length.toDouble
-	val termOverlap = qtfs.sum / (docEuLen * queryLen)
-	numTermsInCommon + termOverlap
-  }
-  
-  def getTermFrequencies(doc : XMLDocument) : Map[String,Int] = {
-    doc.tokens.map(PorterStemmer.stem(_)).groupBy(identity).mapValues(v => v.length)
-  }
-  
-  def ordering(row : (String,Double)) = -row._2 
+  def debug(obj : Any) = if(debug_print) println(obj)
 }

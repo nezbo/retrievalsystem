@@ -19,7 +19,7 @@ class TipsterGroundTruth(path:String) {
 object TipsterGroundTruth {
   
   def main (args:Array[String]){
-    val t = new TipsterGroundTruth("tipster/qrels")
-    t.judgements.foreach(j => println("Topic "+j._1 +": "+j._2.toList+" judgements found."))
+    val t = new TipsterGroundTruth("qrels")
+    t.judgements.foreach(j => println("Topic "+j._1 +": "+j._2.size+" judgements found."))
   }
 }
