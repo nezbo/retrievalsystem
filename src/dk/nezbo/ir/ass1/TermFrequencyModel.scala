@@ -17,7 +17,7 @@ class TermFrequencyModel extends RelevanceModel {
 	      // DO THINGS HERE
 	      for(j <- 0 until queries.length){
 	        
-	        topscores(j).enqueue((doc.name,getTermScore(doc,queries(j))))
+	        topscores(j) += ((doc.name,getTermScore(doc,queries(j))))
 	        if(topscores(j).length > Main.num_to_find)
 	          topscores(j).dequeue
 	      }
@@ -25,8 +25,10 @@ class TermFrequencyModel extends RelevanceModel {
 	      i += 1
 	    }
 	    
-	    topscores.foreach(t => Main.debug(t.reverse))
-	    topscores.map(i => i.reverse.toList.map(tt => tt._1))
+	    val result1 = topscores.map(i => i.toList.sortBy(t => -t._2 ))
+	    val result2 = result1.map(tt => tt.map(t => t._1))
+	    Main.debug(result1)
+	    result2
 	}
 	
 	def getTermFrequencies(doc : XMLDocument) : Map[String,Int] = {
