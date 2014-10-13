@@ -20,7 +20,7 @@ import java.io.PrintWriter
 object Main  {
   
   val num_to_find = 100
-  val num_documents = 10000
+  val num_documents = 100000
   val debug_print = true
   val output_filename = "ranking-emil-jacobsen.run"
   val rel_model = new LanguageModel()//new TermFrequencyModel()
