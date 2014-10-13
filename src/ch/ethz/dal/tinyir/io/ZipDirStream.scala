@@ -35,7 +35,7 @@ extends DirStream (dirpath,extension) {
 
 object ZipDirStream {
   def main(args: Array[String]) {
-    val path = "/Users/thofmann/Data/Tipster/zips"
+    val path = "tipster/zips"
     val docs = new ZipDirStream (path)
     println("Reading from path = " + path)
     println("Number of documents = " + docs.length)

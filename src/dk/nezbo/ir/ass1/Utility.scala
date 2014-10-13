@@ -1,5 +1,13 @@
 package dk.nezbo.ir.ass1
 
+import ch.ethz.dal.tinyir.io.ZipDirStream
+import ch.ethz.dal.tinyir.processing.TipsterParse
+import java.io.File
+import java.io.InputStream
+import ch.ethz.dal.tinyir.io.ZipStream
+import ch.ethz.dal.tinyir.processing.XMLDocument
+import scala.collection.mutable.Queue
+
 object Utility {
   
   def main(args : Array[String]) {
@@ -61,5 +69,44 @@ class PrecRecInterpolation(n : Int) {
     }
     
   }
+}
+
+// one file at a time
+class EmilParse(path : String) {
+  val ziplist = new File(path)
+      .listFiles.filter(_.getName.endsWith(".zip"))        
+  	  .map(z => z.getAbsolutePath)
+  var queue = ziplist.drop(1).toList // the Queue class didn't dequeue properly :S
+  
+  var curZip = new ZipStream(ziplist(0)).stream.iterator
+  var curFile = fetch
+
+  def fetch : InputStream = {
+    if(!curZip.hasNext){
+      if(!queue.isEmpty){
+        curZip = new ZipStream(queue(0)).stream.iterator
+        queue = queue.drop(1).toList
+        //println("next file - "+queue.length+" more to go.")
+      }else{
+        //println("no more files.")
+        return null // done
+      }
+    }
+    curZip.next
+  }
+  
+  //  stream-ish
+  val stream = new Iterator[XMLDocument] {
+	  var i = -1
+	  var hasNext = true
+	  def next(): XMLDocument = 
+	  { 
+	    val result = curFile
+	    curFile = fetch
+	    hasNext = (curFile != null)
+	    i += 1
+	    new TipsterParse(result)
+	  }
+  }	
 }
 }

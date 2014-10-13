@@ -14,7 +14,7 @@ extends ParsedXMLStream(new ZipDirStream(path, "")){
 object TipsterStream  {
 
   def main(args: Array[String]) {
-    val tipster = new TipsterStream ("/Users/thofmann/Data/Tipster/zips")  
+    val tipster = new TipsterStream ("./tipster/zips")  
     println("Number of files in zips = " + tipster.length)
     
     var length : Long = 0 

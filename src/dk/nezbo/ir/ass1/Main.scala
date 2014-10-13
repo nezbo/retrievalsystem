@@ -20,10 +20,10 @@ import java.io.PrintWriter
 object Main  {
   
   val num_to_find = 100
-  val num_documents = 100000 
+  val num_documents = 10000
   val debug_print = true
   val output_filename = "ranking-emil-jacobsen.run"
-  val rel_model = new TermFrequencyModel()
+  val rel_model = new LanguageModel()//new TermFrequencyModel()
 
   def main(args: Array[String]) {
     // load topics
@@ -35,8 +35,9 @@ object Main  {
     debug(queries)
     
     val t0 = System.nanoTime()
-    val tipster = new TipsterStream ("./tipster/zips/")  
-    debug("Number of files in zips = " + tipster.length)
+    //val tipster = new TipsterStream ("./tipster/zips/")
+    val tipster = new Utility.EmilParse("./tipster/zips/")
+    //debug("Number of files in zips = " + tipster.length)
     
     val t1 = System.nanoTime()
     debug("Time elapsed: "+(t1-t0)/1000000000.0+" s")
@@ -95,4 +96,10 @@ object Main  {
   }
   
   def debug(obj : Any) = if(debug_print) println(obj)
+  
+  def ordering(row : (String,Double)) = -row._2
+  
+  def getTermFrequencies(doc : XMLDocument) : Map[String,Int] = {
+	    doc.tokens.map(PorterStemmer.stem(_)).groupBy(identity).mapValues(v => v.length)
+  }
 }
