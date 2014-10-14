@@ -5,6 +5,7 @@ import ch.ethz.dal.tinyir.processing.XMLDocument
 import scala.collection.mutable.HashMap
 import scala.collection.mutable.PriorityQueue
 import scala.util.Try
+import scala.collection.mutable.ListBuffer
 
 class LanguageModel extends RelevanceModel {
   
@@ -12,13 +13,30 @@ class LanguageModel extends RelevanceModel {
 
   def process(queries : Seq[Seq[String]], docs : Iterator[XMLDocument]): Seq[Seq[String]] = {
     
-    val dfs = docs.map(d => d.name -> Main.getTermFrequencies(d)).toMap
-    dfs.foreach(d => d._2.foreach(w => cfs(w._1) = cfs.get(w._1).getOrElse(0) + w._2 ))
+    // do first processing
+    val intermediate = new ListBuffer[(String,List[List[Double]],Int)]
+    var i = 0
+    for(doc <- docs){
+      if(i % 1000 == 0) Main.debug(i+" files done.")
+      
+      val dfs = Main.getTermFrequencies(doc)
+      val totWd = dfs.values.sum
+      dfs.foreach(w => cfs(w._1) = cfs.get(w._1).getOrElse(0) + w._2)
+      
+      val wInD = queries.map(q =>q.filter(w => dfs.contains(w)))
+      
+      intermediate += ((doc.name, wInD.map(q => q.map(w => dfs(w).toDouble / totWd).toList).toList, totWd))
+      i += 1
+    }
     
+    Main.debug("Documents: "+intermediate.size)
+    Main.debug("Words: "+cfs.size)
+
+    // second part with catalog data
     val totWc = cfs.values.sum
-    val totWd = dfs.mapValues(d => d.values.sum)
+    val result = (0 to queries.length-1).map(q => intermediate.map(i => interToScore(i,q,queries(q),totWc)).sortBy(s => -s._2).take(Main.num_to_find).map(s => s._1))
     
-    Main.debug("Documents: "+dfs.size)
+    /*Main.debug("Documents: "+dfs.size)
     Main.debug("Words: "+cfs.size)
     
     var i = 0
@@ -39,13 +57,19 @@ class LanguageModel extends RelevanceModel {
 	val result1 = topscores.map(i => i.toList.sortBy(t => -t._2 ))
 	val result2 = result1.map(tt => tt.map(t => t._1))
 	Main.debug(result1)
-	result2
+	result2*/
+    result
   }
   
-  def languageScore(query: Seq[String], dfs: Map[String,Int], numWd: Int, numWc: Int) : Double = {
+  def interToScore(d: (String,List[List[Double]],Int), q: Int, qObj: Seq[String], totWc: Int) : (String,Double) = {
+    val lambda = scala.math.log(d._3)
+    (d._1 , d._2(q).zipWithIndex.map(z => scala.math.log(1.0 + ((1.0 - lambda)/lambda) * (z._1 / cfs(qObj(z._2)) ))).sum + scala.math.log(lambda))
+  }
+  
+  /*def languageScore(query: Seq[String], dfs: Map[String,Int], numWd: Int, numWc: Int) : Double = {
     val wInD = query.filter(w => dfs.contains(w))
     val lambda = 1.0 / scala.math.log(numWd)
     
     wInD.map(w => scala.math.log(1 + ((1 - lambda) / lambda) * (dfs(w).toDouble / numWd) / (cfs.get(w).getOrElse(0).toDouble / numWc))).sum + scala.math.log(lambda)
-  }
+  }*/
 }

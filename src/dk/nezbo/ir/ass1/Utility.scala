@@ -73,9 +73,11 @@ class PrecRecInterpolation(n : Int) {
 
 // one file at a time
 class EmilParse(path : String) {
-  val ziplist = new File(path)
-      .listFiles.filter(_.getName.endsWith(".zip"))        
-  	  .map(z => z.getAbsolutePath)
+  val ziplist = new File(path).listFiles.filter(f => f.isDirectory())
+  	.flatMap(f => f
+      .listFiles.filter(_.getName.endsWith(".zip")))        
+  	  .map(z => z.getAbsolutePath).sorted.toList
+  	  
   var queue = ziplist.drop(1).toList // the Queue class didn't dequeue properly :S
   
   var curZip = new ZipStream(ziplist(0)).stream.iterator

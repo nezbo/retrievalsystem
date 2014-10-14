@@ -26,8 +26,9 @@ extends DirStream (dirpath,extension) {
   override def stream : Stream[InputStream] =  
     ziplist.map(new ZipStream(_,extension).stream).reduceLeft(_ append _)
   
-  val ziplist = new File(dirpath)
-      .listFiles.filter(isZipFile(_))        
+  val ziplist = new File(dirpath).listFiles.filter(f => f.isDirectory())
+  	.flatMap(f => f
+      .listFiles.filter(_.getName.endsWith(".zip")))        
   	  .map(z => z.getAbsolutePath).sorted.toList
   
   private def isZipFile(f: File) = f.getName.endsWith(".zip")

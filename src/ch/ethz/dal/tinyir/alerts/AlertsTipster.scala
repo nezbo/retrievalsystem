@@ -31,9 +31,10 @@ object AlertsTipster {
     val rel = new TipsterGroundTruth("tipster/qrels").judgements.get(51).get.toSet
     val ret = alerts.results.map(r => r.title)
     val pr = new PrecisionRecall(ret,rel)
-    println(pr.relevIdx.mkString(" "))
-    println(pr.precs.mkString(" "))
-    println(pr.iprecs.mkString(" "))
+    //println(pr.relevIdx.mkString(" "))
+    //println(pr.precs.mkString(" "))
+    //println(pr.iprecs.mkString(" "))
+    println("Done.")
   }
   
 }

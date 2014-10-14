@@ -19,15 +19,17 @@ import java.io.PrintWriter
 
 object Main  {
   
-  val num_to_find = 100
-  val num_documents = 100000
-  val debug_print = true
+  val input_folder = "./tipster/zips"
   val output_filename = "ranking-emil-jacobsen.run"
-  val rel_model = new LanguageModel()//new TermFrequencyModel()
+    
+  val num_to_find = 100
+  val num_documents = Int.MaxValue 
+  val debug_print = true
+  val rel_model = new TermFrequencyModel()//new LanguageModel() //
 
   def main(args: Array[String]) {
     // load topics
-    val topics = loadTopics.drop(7).take(1) //.drop(39)
+    val topics = loadTopics.drop(39).take(1) //.drop(39)
     debug(topics)
     
     // prepare queries
@@ -36,7 +38,7 @@ object Main  {
     
     val t0 = System.nanoTime()
     //val tipster = new TipsterStream ("./tipster/zips/")
-    val tipster = new Utility.EmilParse("./tipster/zips/")
+    val tipster = new Utility.EmilParse(input_folder)
     //debug("Number of files in zips = " + tipster.length)
     
     val t1 = System.nanoTime()
