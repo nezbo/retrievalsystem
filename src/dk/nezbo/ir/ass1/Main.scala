@@ -59,12 +59,12 @@ object Main  {
       val name = topic._1._1
       val index = topic._2
       
-      if(judgements.contains(id)){
+      if(judgements.contains(id.toString)){
         // look at judgements and compare
     	println("\nEvaluating: "+name)
       
 	    val ranked = topscores(index)
-	    val relev = judgements.get(id).get.toSet
+	    val relev = judgements.get(id.toString).get.toSet
 	      
 	    val precRecall = PrecisionRecall.evaluate(ranked.toSet, relev)
 	    println(precRecall)

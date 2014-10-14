@@ -22,19 +22,18 @@ object AlertsTipster {
       alerts.process(doc.name, doc.tokens)
       if (iter % 20000 ==0) {
         println("Iteration = " + iter)
-        alerts.results.foreach(println)    
+        //alerts.results.foreach(println)    
       }  
     }
     sw.stop
     println("Stopped time = " + sw.stopped)
     alerts.results.foreach(println)  
-    val rel = new TipsterGroundTruth("tipster/qrels").judgements.get(51).get.toSet
+    val rel = new TipsterGroundTruth("tipster/qrels").judgements.get("51").get.toSet
     val ret = alerts.results.map(r => r.title)
     val pr = new PrecisionRecall(ret,rel)
-    //println(pr.relevIdx.mkString(" "))
-    //println(pr.precs.mkString(" "))
-    //println(pr.iprecs.mkString(" "))
-    println("Done.")
+    println(pr.relevIdx.mkString(" "))
+    println(pr.precs.mkString(" "))
+    println(pr.iprecs.mkString(" "))
   }
   
 }

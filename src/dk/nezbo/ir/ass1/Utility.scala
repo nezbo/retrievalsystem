@@ -72,8 +72,8 @@ class PrecRecInterpolation(n : Int) {
 }
 
 // one file at a time
-class EmilParse(path : String) {
-  val ziplist = new File(path).listFiles.filter(f => f.isDirectory())
+class EmilParse(dirpath : String) {
+  val ziplist = new File(dirpath).listFiles.filter(f => f.isDirectory())
   	.flatMap(f => f
       .listFiles.filter(_.getName.endsWith(".zip")))        
   	  .map(z => z.getAbsolutePath).sorted.toList
