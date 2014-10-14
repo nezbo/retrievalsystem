@@ -21,9 +21,15 @@ object TipsterStream  {
     
     var length : Long = 0 
     var tokens : Long = 0
-    for (doc <- tipster.stream.take(10000)) { 
+    var iter = 0
+    for (doc <- tipster.stream) {
+      iter += 1
       length += doc.content.length          
       tokens += doc.tokens.length
+      
+      if (iter % 20000 == 0) {
+        println("Iteration = " + iter)
+      }  
     }
     sw.stop
     println("Stopped time = " + sw.stopped)
