@@ -11,13 +11,17 @@ class LanguageModel extends RelevanceModel {
   
   val cfs : HashMap[String,Int] = new HashMap[String,Int]
 
-  def process(queries : Seq[Seq[String]], docs : Iterator[XMLDocument]): Seq[Seq[String]] = {
+  def process(queries : Seq[Seq[String]], docs : Stream[XMLDocument]): Seq[Seq[String]] = {
     
     // do first processing
     val intermediate = new ListBuffer[(String,List[List[Double]],Int)]
     var i = 0
+    var t0 = System.nanoTime()
     for(doc <- docs){
-      if(i % 1000 == 0) Main.debug(i+" files done.")
+      if(i % 1000 == 0){
+        Main.debug(i+" files done - "+cfs.size+" words - "+(System.nanoTime()-t0)/1000000000.0+" s")
+        t0 = System.nanoTime()
+      }
       
       val dfs = Main.getTermFrequencies(doc)
       val totWd = dfs.values.sum

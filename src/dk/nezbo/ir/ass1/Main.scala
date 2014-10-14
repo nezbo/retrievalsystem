@@ -25,7 +25,7 @@ object Main  {
   val num_to_find = 100
   val num_documents = Int.MaxValue 
   val debug_print = true
-  val rel_model = new TermFrequencyModel()//new LanguageModel() //
+  val rel_model = new LanguageModel()//new TermFrequencyModel()
 
   def main(args: Array[String]) {
     // load topics
@@ -37,8 +37,8 @@ object Main  {
     debug(queries)
     
     val t0 = System.nanoTime()
-    //val tipster = new TipsterStream ("./tipster/zips/")
-    val tipster = new Utility.EmilParse(input_folder)
+    val tipster = new TipsterStream ("./tipster/zips/")
+    //val tipster = new Utility.EmilParse(input_folder)
     //debug("Number of files in zips = " + tipster.length)
     
     val t1 = System.nanoTime()

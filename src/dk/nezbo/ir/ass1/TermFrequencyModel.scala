@@ -8,7 +8,7 @@ import com.github.aztek.porterstemmer.PorterStemmer
 
 class TermFrequencyModel extends RelevanceModel {
   
-	def process(queries : Seq[Seq[String]], docs : Iterator[XMLDocument]): Seq[Seq[String]] = {
+	def process(queries : Seq[Seq[String]], docs : Stream[XMLDocument]): Seq[Seq[String]] = {
 	    var i = 0
 	    var topscores = queries.map(q => new PriorityQueue[(String,Double)]()(Ordering.by(Main.ordering)))
 	    
