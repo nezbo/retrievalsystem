@@ -16,6 +16,7 @@ import dk.nezbo.ir.ass1.Utility.PrecRecInterpolation
 import ch.ethz.dal.tinyir.lectures.PrecisionRecall
 import java.io.FileWriter
 import java.io.PrintWriter
+import scala.collection.mutable.HashMap
 
 object Main  {
   
@@ -25,20 +26,20 @@ object Main  {
   val num_to_find = 100
   val num_documents = Int.MaxValue 
   val debug_print = true
-  val rel_model = new LanguageModel()//new TermFrequencyModel()
+  val rel_model = new LanguageModel()//new TermFrequencyModel()////
 
   def main(args: Array[String]) {
     // load topics
-    val topics = loadTopics.drop(39).take(1) //.drop(39)
+    val topics = loadTopics.take(10) //.drop(39)
     debug(topics)
     
     // prepare queries
-    val queries = topics.map(_._1).map(q => Tokenizer.tokenize(q.toLowerCase()).map(PorterStemmer.stem(_))).toList
+    val queries = topics.map(_._1).map(q => Tokenizer.tokenize(q.toLowerCase()).map(getStem(_))).toList
     debug(queries)
     
     val t0 = System.nanoTime()
-    val tipster = new TipsterStream ("./tipster/zips/")
-    //val tipster = new Utility.EmilParse(input_folder)
+    //val tipster = new TipsterStream ("./tipster/zips/")
+    val tipster = new Utility.EmilParse(input_folder)
     //debug("Number of files in zips = " + tipster.length)
     
     val t1 = System.nanoTime()
@@ -53,6 +54,10 @@ object Main  {
     val quality = new PrecRecInterpolation(11)
     val judgements = new TipsterGroundTruth("tipster/qrels").judgements
     val avgP = new ListBuffer[Double]()
+    
+    // for printing
+    val file = new File("tipster/results/"+output_filename)
+    file.getParentFile().mkdir()
     
     for(topic <- topics.zipWithIndex){
       val id = topic._1._2
@@ -73,7 +78,7 @@ object Main  {
 	    println("Average Interpolated Precision: "+avgPInterp)
       } else {
         // print wanted output
-        val fw = new FileWriter("./tipster/results/"+output_filename,true)
+        val fw = new FileWriter(file,true)
         topscores(index).toList.zipWithIndex.foreach(l => fw.write(id+" "+(l._2+1)+" "+l._1 +"\n"))
         fw.close()
       }
@@ -102,6 +107,16 @@ object Main  {
   def ordering(row : (String,Double)) = -row._2
   
   def getTermFrequencies(doc : XMLDocument) : Map[String,Int] = {
-	    doc.tokens.map(PorterStemmer.stem(_)).groupBy(identity).mapValues(v => v.length)
+	doc.tokens.map(getStem(_)).groupBy(identity).mapValues(v => v.length)
+  }
+  
+  val stemCache : HashMap[String,String] = new HashMap[String,String]
+  def getStem(word : String) : String = {
+    if(stemCache.size > 500000) stemCache.clear
+    
+    if(!stemCache.contains(word)){
+      stemCache.put(word, PorterStemmer.stem(word))
+    }
+    stemCache(word)
   }
 }

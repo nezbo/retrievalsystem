@@ -8,12 +8,12 @@ import com.github.aztek.porterstemmer.PorterStemmer
 
 class TermFrequencyModel extends RelevanceModel {
   
-	def process(queries : Seq[Seq[String]], docs : Stream[XMLDocument]): Seq[Seq[String]] = {
+	def process(queries : Seq[Seq[String]], docs : Iterator[XMLDocument]): Seq[Seq[String]] = {
 	    var i = 0
 	    var topscores = queries.map(q => new PriorityQueue[(String,Double)]()(Ordering.by(Main.ordering)))
 	    
 	    for (doc <- docs) {
-	      if(i % 1000 == 0) Main.debug(i+" files done.")
+	      if(i % 1000 == 0) Main.debug(i+" files done - "+Main.stemCache.size+" stems in Cache.")
 	      
 	      // DO THINGS HERE
 	      for(j <- 0 until queries.length){

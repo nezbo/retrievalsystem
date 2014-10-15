@@ -11,25 +11,25 @@ class LanguageModel extends RelevanceModel {
   
   val cfs : HashMap[String,Int] = new HashMap[String,Int]
 
-  def process(queries : Seq[Seq[String]], docs : Stream[XMLDocument]): Seq[Seq[String]] = {
+  def process(queries : Seq[Seq[String]], docs : Iterator[XMLDocument]): Seq[Seq[String]] = {
     
     // do first processing
-    val intermediate = new ListBuffer[(String,List[List[Double]],Int)]
+    val intermediate = new ListBuffer[(String,Seq[Seq[Double]],Int)]
     var i = 0
     var t0 = System.nanoTime()
     for(doc <- docs){
       if(i % 1000 == 0){
-        Main.debug(i+" files done - "+cfs.size+" words - "+(System.nanoTime()-t0)/1000000000.0+" s")
+        Main.debug(i+" files done - "+cfs.size+" words - "+Main.stemCache.size+" stems in Cache - "+(System.nanoTime()-t0)/1000000000.0+" s")
         t0 = System.nanoTime()
       }
       
       val dfs = Main.getTermFrequencies(doc)
       val totWd = dfs.values.sum
-      dfs.foreach(w => cfs(w._1) = cfs.get(w._1).getOrElse(0) + w._2)
+      dfs.filter(w => w._2 > 1 || cfs.contains(w._1)).foreach(w => cfs(w._1) = cfs.get(w._1).getOrElse(0) + w._2)
       
       val wInD = queries.map(q =>q.filter(w => dfs.contains(w)))
       
-      intermediate += ((doc.name, wInD.map(q => q.map(w => dfs(w).toDouble / totWd).toList).toList, totWd))
+      intermediate += ((doc.name, wInD.map(q => q.map(w => dfs(w).toDouble / totWd)), totWd))
       i += 1
     }
     
@@ -38,7 +38,10 @@ class LanguageModel extends RelevanceModel {
 
     // second part with catalog data
     val totWc = cfs.values.sum
-    val result = (0 to queries.length-1).map(q => intermediate.map(i => interToScore(i,q,queries(q),totWc)).sortBy(s => -s._2).take(Main.num_to_find).map(s => s._1))
+    val result = (0 to queries.length-1)
+    	.map(q => intermediate.map(i => interToScore(i,q,queries(q),totWc))
+    		.sortBy(s => -s._2)
+    		.take(Main.num_to_find).map(s => s._1))
     
     /*Main.debug("Documents: "+dfs.size)
     Main.debug("Words: "+cfs.size)
@@ -65,9 +68,9 @@ class LanguageModel extends RelevanceModel {
     result
   }
   
-  def interToScore(d: (String,List[List[Double]],Int), q: Int, qObj: Seq[String], totWc: Int) : (String,Double) = {
+  def interToScore(d: (String,Seq[Seq[Double]],Int), q: Int, qObj: Seq[String], totWc: Int) : (String,Double) = {
     val lambda = scala.math.log(d._3)
-    (d._1 , d._2(q).zipWithIndex.map(z => scala.math.log(1.0 + ((1.0 - lambda)/lambda) * (z._1 / cfs(qObj(z._2)) ))).sum + scala.math.log(lambda))
+    (d._1 , d._2(q).zipWithIndex.filter(q => cfs.contains(qObj(q._2))).map(z => scala.math.log(1.0 + ((1.0 - lambda)/lambda) * (z._1 / cfs(qObj(z._2)) ))).sum + scala.math.log(lambda))
   }
   
   /*def languageScore(query: Seq[String], dfs: Map[String,Int], numWd: Int, numWc: Int) : Double = {
