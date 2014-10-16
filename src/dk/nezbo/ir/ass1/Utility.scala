@@ -75,7 +75,8 @@ class PrecRecInterpolation(n : Int) {
 class EmilParse(dirpath : String) {
   val ziplist = new File(dirpath).listFiles.filter(f => f.isDirectory())
   	.flatMap(f => f
-      .listFiles.filter(_.getName.endsWith(".zip")))        
+      .listFiles.filter(_.getName.endsWith(".zip")))
+      .union(new File(dirpath).listFiles.filter(_.getName.endsWith(".zip")))
   	  .map(z => z.getAbsolutePath).sorted.toList
   	  
   var queue = ziplist.drop(1).toList // the Queue class didn't dequeue properly :S

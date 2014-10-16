@@ -17,45 +17,37 @@ import ch.ethz.dal.tinyir.lectures.PrecisionRecall
 import java.io.FileWriter
 import java.io.PrintWriter
 import scala.collection.mutable.HashMap
+import scala.util.Try
 
-object Main  {
-  
-  val input_folder = "./tipster/zips"
-  val output_filename = "ranking-emil-jacobsen.run"
-    
-  val num_to_find = 100
-  val num_documents = 100000
-  val debug_print = true
-  val rel_model = new LanguageModel()//new TermFrequencyModel()////
-
-  def main(args: Array[String]) {
-    // load topics
-    val topics = loadTopics.take(10)
-    debug(topics)
+private class Mainx {
+  def run = {
+	// load topics
+    val topics = Main.loadTopics.take(10)
+    Main.debug(topics)
     
     // prepare queries
-    val queries = topics.map(_._1).map(q => Tokenizer.tokenize(q.toLowerCase()).map(getStem(_))).toList
-    debug(queries)
+    val queries = topics.map(_._1).map(q => Tokenizer.tokenize(q.toLowerCase()).map(Main.getStem(_))).toList
+    Main.debug(queries)
     
     val t0 = System.nanoTime()
-    val tipster = new Utility.EmilParse(input_folder)
+    val tipster = new Utility.EmilParse(Main.data_folder+"/zips")
     
     val t1 = System.nanoTime()
-    debug("Time elapsed: "+(t1-t0)/1000000000.0+" s")
+    Main.debug("Time elapsed: "+(t1-t0)/1000000000.0+" s")
 
-	val topscores = rel_model.process(queries, tipster.stream.take(num_documents))
-	topscores.foreach(debug(_))
+	val topscores = Main.rel_model.process(queries, tipster.stream.take(Main.num_documents))
+	topscores.foreach(Main.debug(_))
     
     val t2 = System.nanoTime()
-    debug("\nTime elapsed: "+(t2-t0)/1000000000.0+" s")
+    Main.debug("\nTime elapsed: "+(t2-t0)/1000000000.0+" s")
     
     // Compare relevance
     val quality = new PrecRecInterpolation(11)
-    val judgements = new TipsterGroundTruth("tipster/qrels").judgements
+    val judgements = new TipsterGroundTruth(Main.data_folder+"/qrels").judgements
     val avgP = new ListBuffer[Double]()
     
     // for printing
-    val file = new File("tipster/results/"+output_filename)
+    val file = new File(Main.data_folder+"/results/"+Main.output_filename)
     file.getParentFile().mkdir()
     
     for(topic <- topics.zipWithIndex){
@@ -90,17 +82,49 @@ object Main  {
     }
     
     val t3 = System.nanoTime()
-    debug("\nTime elapsed: "+(t3-t0)/1000000000.0+" s")
+    Main.debug("\nTime elapsed: "+(t3-t0)/1000000000.0+" s")
   }
+}
+
+object Main  {
   
+  var data_folder = "./tipster"
+  var output_folder = "./tipster/result/"
+  val output_filename = "ranking-emil-jacobsen.run"
+    
+  var num_to_find = 100
+  val num_documents = Int.MaxValue 
+  var debug_print = true
+  var rel_model : RelevanceModel = new LanguageModel()//new TermFrequencyModel()
+
+  /*
+   * Command line structure:
+   * scala emil.jar [data folder] [relevance model] [result size (n)] [debug]
+   * 
+   * Values above are default values:
+   * It expects folder "/zips/" and files "qrels" and "topics" in the data folder.
+   * 
+   * Example: "scala emil.jar "./tipster" "l" "100" "false"
+   */
+  def main(args: Array[String]) {
+    // set parameters
+    if(args.size > 0) data_folder = args(0)
+    if(args.size > 1) if(args(1).toLowerCase.equals("l")) {rel_model = new LanguageModel()} else {rel_model = new TermFrequencyModel()}
+    if(args.size > 2) num_to_find = Try(args(2).toInt).getOrElse(100)
+    if(args.size > 3) debug_print = Try(args(3).toBoolean).getOrElse(true)
+    
+    // run!
+    new Mainx().run
+  }
+   
   def loadTopics : List[(String,Int)] = {
-    val topics = Source.fromFile("tipster/topics").getLines.filter(l => l.contains("<title>")).map(t => t.split(":").last.trim)
-    val ids = Source.fromFile("tipster/topics").getLines.filter(l => l.contains("<num>")).map(t => t.split(":").last.trim.toInt)
+    val topics = Source.fromFile(data_folder+"/topics").getLines.filter(l => l.contains("<title>")).map(t => t.split(":").last.trim)
+    val ids = Source.fromFile(data_folder+"/topics").getLines.filter(l => l.contains("<num>")).map(t => t.split(":").last.trim.toInt)
     
     topics.zip(ids).toList
   }
   
-  def debug(obj : Any) = if(debug_print) println(obj)
+  def debug(obj : Any) = if(Main.debug_print) println(obj)
   
   def ordering(row : (String,Double)) = -row._2
   
@@ -108,6 +132,7 @@ object Main  {
 	doc.tokens.map(getStem(_)).groupBy(identity).mapValues(v => v.length)
   }
   
+  // cache to reduce time stemming common words, cleared often to limit memory usage
   val stemCache : HashMap[String,String] = new HashMap[String,String]
   def getStem(word : String) : String = {
     if(stemCache.size > 500000) stemCache.clear
