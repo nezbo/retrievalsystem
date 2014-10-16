@@ -12,8 +12,13 @@ class TermFrequencyModel extends RelevanceModel {
 	    var i = 0
 	    var topscores = queries.map(q => new PriorityQueue[(String,Double)]()(Ordering.by(Main.ordering)))
 	    
+	    var t0 = System.nanoTime()
 	    for (doc <- docs) {
-	      if(i % 1000 == 0) Main.debug(i+" files done - "+Main.stemCache.size+" stems in Cache.")
+	      if(i % 1000 == 0){
+	        val t1 = System.nanoTime()
+	        Main.debug(i+" files done - "+Main.stemCache.size+" stems in Cache - "+(t1-t0)/1000000000.0+" s")
+	        t0 = t1
+	      }
 	      
 	      // DO THINGS HERE
 	      for(j <- 0 until queries.length){

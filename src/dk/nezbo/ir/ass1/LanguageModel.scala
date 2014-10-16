@@ -21,8 +21,9 @@ class LanguageModel extends RelevanceModel {
     for(doc <- docs){
       // logging
       if(i > 0 && i % 1000 == 0){
-        Main.debug(i+" files done - ("+intermediate.size+" saved) - "+Main.stemCache.size+" stems in Cache - "+(System.nanoTime()-t0)/1000000000.0+" s")
-        t0 = System.nanoTime()
+        val t1 = System.nanoTime()
+        Main.debug(i+" files done - ("+intermediate.size+" saved) - "+Main.stemCache.size+" stems in Cache - "+(t1-t0)/1000000000.0+" s")
+        t0 = t1
       }
       
       val tfs = Main.getTermFrequencies(doc)

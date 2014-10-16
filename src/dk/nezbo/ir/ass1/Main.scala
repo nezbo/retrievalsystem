@@ -22,7 +22,7 @@ import scala.util.Try
 private class Mainx {
   def run = {
 	// load topics
-    val topics = Main.loadTopics.take(10)
+    val topics = Main.loadTopics.drop(39)
     Main.debug(topics)
     
     // prepare queries
@@ -90,7 +90,7 @@ object Main  {
   
   var data_folder = "./tipster"
   var output_folder = "./tipster/result/"
-  val output_filename = "ranking-emil-jacobsen.run"
+  var output_filename = "ranking-l-emil-jacobsen.run"
     
   var num_to_find = 100
   val num_documents = Int.MaxValue 
@@ -109,7 +109,14 @@ object Main  {
   def main(args: Array[String]) {
     // set parameters
     if(args.size > 0) data_folder = args(0)
-    if(args.size > 1) if(args(1).toLowerCase.equals("l")) {rel_model = new LanguageModel()} else {rel_model = new TermFrequencyModel()}
+    if(args.size > 1) 
+      if(args(1).toLowerCase.equals("l")) {
+        rel_model = new LanguageModel()
+        output_filename = "ranking-l-emil-jacobsen.run"
+      } else {
+        rel_model = new TermFrequencyModel()
+        output_filename = "ranking-t-emil-jacobsen.run"
+      }
     if(args.size > 2) num_to_find = Try(args(2).toInt).getOrElse(100)
     if(args.size > 3) debug_print = Try(args(3).toBoolean).getOrElse(true)
     
