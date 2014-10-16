@@ -15,7 +15,7 @@ class LanguageModel extends RelevanceModel {
   def process(queries : Seq[Seq[String]], docs : Iterator[XMLDocument]): Seq[Seq[String]] = {
     
     // do first processing
-    val intermediate = new ListBuffer[(String,Seq[Seq[Double]],Int)]
+    val intermediate = new ListBuffer[(String,Seq[Seq[(String,Double)]],Int)]
     var i = 0
     var t0 = System.nanoTime()
     for(doc <- docs){
@@ -33,11 +33,11 @@ class LanguageModel extends RelevanceModel {
       tfs.filter(w => queries.exists(q => q.contains(w._1))).foreach(w => cfs(w._1) = cfs.get(w._1).getOrElse(0) + w._2)
       
       // TODO FUCK THIS
-      val wInD = queries.map(q =>q.filter(w => tfs.contains(w)))
+      val wInD = queries.map(q => q.filter(w => tfs.contains(w)) )
       
       // only save documents that actually contain a word from a query
       if(wInD.map(q => q.size).sum > 0){
-        intermediate += ((doc.name, wInD.map(q => q.map(w => tfs(w).toDouble / totWd)), totWd))
+        intermediate += ((doc.name, wInD.map(q => q.map(w => ((w, tfs(w).toDouble / totWd )) )), totWd))
       }
       
       i += 1
@@ -48,13 +48,13 @@ class LanguageModel extends RelevanceModel {
 
     // second part with catalog data (and then mapping into final resultSet
     (0 to queries.length-1)
-    	.map(q => intermediate.map(i => ((i._1, interToScore(i,q,queries(q) )) ))
+    	.map(q => intermediate.map(i => ((i._1, interToScore(i,q) )) )
     		.sortBy(s => -s._2)
     		.take(Main.num_to_find).map(s => s._1))
   }
   
-  def interToScore(d: (String,Seq[Seq[Double]],Int), q: Int, qObj: Seq[String]) : Double = {
+  def interToScore(d: (String,Seq[Seq[(String,Double)]],Int), q: Int) : Double = {
     val lambda = 1.0 / d._3
-    d._2(q).zipWithIndex.filter(q => cfs.contains(qObj(q._2))).map(z => math.log(1.0 + ((1.0 - lambda)/lambda) * (z._1 / (cfs(qObj(z._2)).toDouble / totWc) ))).sum + math.log(lambda)
+    d._2(q).filter(q => cfs.contains(q._1)).map(q => math.log(1.0 + ((1.0 - lambda)/lambda) * (q._2 / (cfs(q._1).toDouble / totWc) ))).sum + math.log(lambda)
   }
 }
