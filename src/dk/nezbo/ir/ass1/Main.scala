@@ -24,13 +24,13 @@ object Main  {
   val output_filename = "ranking-emil-jacobsen.run"
     
   val num_to_find = 100
-  val num_documents = Int.MaxValue 
+  val num_documents = 100000
   val debug_print = true
   val rel_model = new LanguageModel()//new TermFrequencyModel()////
 
   def main(args: Array[String]) {
     // load topics
-    val topics = loadTopics.take(10) //.drop(39)
+    val topics = loadTopics.take(10)
     debug(topics)
     
     // prepare queries
@@ -38,14 +38,13 @@ object Main  {
     debug(queries)
     
     val t0 = System.nanoTime()
-    //val tipster = new TipsterStream ("./tipster/zips/")
     val tipster = new Utility.EmilParse(input_folder)
-    //debug("Number of files in zips = " + tipster.length)
     
     val t1 = System.nanoTime()
     debug("Time elapsed: "+(t1-t0)/1000000000.0+" s")
 
 	val topscores = rel_model.process(queries, tipster.stream.take(num_documents))
+	topscores.foreach(debug(_))
     
     val t2 = System.nanoTime()
     debug("\nTime elapsed: "+(t2-t0)/1000000000.0+" s")
@@ -95,9 +94,8 @@ object Main  {
   }
   
   def loadTopics : List[(String,Int)] = {
-    val lines = Source.fromFile("tipster/topics").getLines
-    val topics = lines.filter(l => l.contains("<title>")).map(t => t.split(":").last.trim)
-    val ids = lines.filter(l => l.contains("<num>")).map(t => t.split(":").last.trim.toInt)
+    val topics = Source.fromFile("tipster/topics").getLines.filter(l => l.contains("<title>")).map(t => t.split(":").last.trim)
+    val ids = Source.fromFile("tipster/topics").getLines.filter(l => l.contains("<num>")).map(t => t.split(":").last.trim.toInt)
     
     topics.zip(ids).toList
   }

@@ -10,6 +10,7 @@ import scala.collection.mutable.ListBuffer
 class LanguageModel extends RelevanceModel {
   
   val cfs : HashMap[String,Int] = new HashMap[String,Int]
+  var totWc : Long = 0
 
   def process(queries : Seq[Seq[String]], docs : Iterator[XMLDocument]): Seq[Seq[String]] = {
     
@@ -18,65 +19,42 @@ class LanguageModel extends RelevanceModel {
     var i = 0
     var t0 = System.nanoTime()
     for(doc <- docs){
-      if(i % 1000 == 0){
-        Main.debug(i+" files done - "+cfs.size+" words - "+Main.stemCache.size+" stems in Cache - "+(System.nanoTime()-t0)/1000000000.0+" s")
+      // logging
+      if(i > 0 && i % 1000 == 0){
+        Main.debug(i+" files done - ("+intermediate.size+" saved) - "+Main.stemCache.size+" stems in Cache - "+(System.nanoTime()-t0)/1000000000.0+" s")
         t0 = System.nanoTime()
       }
       
-      val dfs = Main.getTermFrequencies(doc)
-      val totWd = dfs.values.sum
-      dfs.filter(w => w._2 > 1 || cfs.contains(w._1)).foreach(w => cfs(w._1) = cfs.get(w._1).getOrElse(0) + w._2)
+      val tfs = Main.getTermFrequencies(doc)
+      val totWd = tfs.values.sum
+      this.totWc += totWd // update collection sum
       
-      val wInD = queries.map(q =>q.filter(w => dfs.contains(w)))
+      // store collection word counts (only add if more than one occurence)
+      tfs.filter(w => queries.exists(q => q.contains(w._1))).foreach(w => cfs(w._1) = cfs.get(w._1).getOrElse(0) + w._2)
       
-      intermediate += ((doc.name, wInD.map(q => q.map(w => dfs(w).toDouble / totWd)), totWd))
+      // TODO FUCK THIS
+      val wInD = queries.map(q =>q.filter(w => tfs.contains(w)))
+      
+      // only save documents that actually contain a word from a query
+      if(wInD.map(q => q.size).sum > 0){
+        intermediate += ((doc.name, wInD.map(q => q.map(w => tfs(w).toDouble / totWd)), totWd))
+      }
+      
       i += 1
     }
     
     Main.debug("Documents: "+intermediate.size)
     Main.debug("Words: "+cfs.size)
 
-    // second part with catalog data
-    val totWc = cfs.values.sum
-    val result = (0 to queries.length-1)
-    	.map(q => intermediate.map(i => interToScore(i,q,queries(q),totWc))
+    // second part with catalog data (and then mapping into final resultSet
+    (0 to queries.length-1)
+    	.map(q => intermediate.map(i => ((i._1, interToScore(i,q,queries(q) )) ))
     		.sortBy(s => -s._2)
     		.take(Main.num_to_find).map(s => s._1))
-    
-    /*Main.debug("Documents: "+dfs.size)
-    Main.debug("Words: "+cfs.size)
-    
-    var i = 0
-    var lastQ = 0
-    var topscores = queries.map(q => new PriorityQueue[(String,Double)]()(Ordering.by(Main.ordering)))
-    for(q <- 0 to queries.length-1; doc <- dfs){
-      if(lastQ != 0 || i % 1000 == 0){
-        Main.debug("Query "+q+": "+i+" files done.")
-        lastQ = q
-      }
-      
-      topscores(q) += ((doc._1,languageScore(queries(q),doc._2,totWd(doc._1),totWc)))
-	  if(topscores(q).length > Main.num_to_find) { topscores(q).dequeue }
-	  
-      i += 1
-    }
-    
-	val result1 = topscores.map(i => i.toList.sortBy(t => -t._2 ))
-	val result2 = result1.map(tt => tt.map(t => t._1))
-	Main.debug(result1)
-	result2*/
-    result
   }
   
-  def interToScore(d: (String,Seq[Seq[Double]],Int), q: Int, qObj: Seq[String], totWc: Int) : (String,Double) = {
-    val lambda = scala.math.log(d._3)
-    (d._1 , d._2(q).zipWithIndex.filter(q => cfs.contains(qObj(q._2))).map(z => scala.math.log(1.0 + ((1.0 - lambda)/lambda) * (z._1 / cfs(qObj(z._2)) ))).sum + scala.math.log(lambda))
+  def interToScore(d: (String,Seq[Seq[Double]],Int), q: Int, qObj: Seq[String]) : Double = {
+    val lambda = 1.0 / d._3
+    d._2(q).zipWithIndex.filter(q => cfs.contains(qObj(q._2))).map(z => math.log(1.0 + ((1.0 - lambda)/lambda) * (z._1 / (cfs(qObj(z._2)).toDouble / totWc) ))).sum + math.log(lambda)
   }
-  
-  /*def languageScore(query: Seq[String], dfs: Map[String,Int], numWd: Int, numWc: Int) : Double = {
-    val wInD = query.filter(w => dfs.contains(w))
-    val lambda = 1.0 / scala.math.log(numWd)
-    
-    wInD.map(w => scala.math.log(1 + ((1 - lambda) / lambda) * (dfs(w).toDouble / numWd) / (cfs.get(w).getOrElse(0).toDouble / numWc))).sum + scala.math.log(lambda)
-  }*/
 }
