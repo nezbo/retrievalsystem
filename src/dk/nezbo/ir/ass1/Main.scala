@@ -19,22 +19,28 @@ import java.io.PrintWriter
 import scala.collection.mutable.HashMap
 import scala.util.Try
 
+/**
+ * A simple class containing the method to run the processing
+ * of queries with the settings defined by the static main-method.
+ */
 private class Mainx {
   def run = {
 	// load topics
     val topics = Main.loadTopics.drop(39)
     Main.debug(topics)
     
-    // prepare queries
+    // Prepare queries
     val queries = topics.map(_._1).map(q => Tokenizer.tokenize(q.toLowerCase()).map(Main.getStem(_))).toList
     Main.debug(queries)
     
+    // Open my own implementation of reading the files
     val t0 = System.nanoTime()
     val tipster = new Utility.EmilParse(Main.data_folder+"/zips")
     
     val t1 = System.nanoTime()
     Main.debug("Time elapsed: "+(t1-t0)/1000000000.0+" s")
 
+    // Let the selected relevance model process the documents with the queries.
 	val topscores = Main.rel_model.process(queries, tipster.stream.take(Main.num_documents))
 	topscores.foreach(Main.debug(_))
     
@@ -46,7 +52,7 @@ private class Mainx {
     val judgements = new TipsterGroundTruth(Main.data_folder+"/qrels").judgements
     val avgP = new ListBuffer[Double]()
     
-    // for printing
+    // for printing to file
     val file = new File(Main.data_folder+"/results/"+Main.output_filename)
     file.getParentFile().mkdir()
     
@@ -55,7 +61,7 @@ private class Mainx {
       val name = topic._1._1
       val index = topic._2
       
-      if(judgements.contains(id.toString)){
+      if(judgements.contains(id.toString)){ // the topic has been judged
         // look at judgements and compare
     	println("\nEvaluating: "+name)
       
@@ -67,25 +73,31 @@ private class Mainx {
 	    val avgPInterp = quality.nAveragedPrecision(ranked, relev)
 	    avgP += avgPInterp
 	    println("Average Interpolated Precision: "+avgPInterp)
-      } else {
-        // print wanted output
+      } else { // not judged = new one
+        // Print the top N documents for each query to the file
         val fw = new FileWriter(file,true)
         topscores(index).toList.zipWithIndex.foreach(l => fw.write(id+" "+(l._2+1)+" "+l._1 +"\n"))
         fw.close()
       }
     }
     
-    // Mean Average Precision
+    // Mean Average (interpolated) Precision
     if(!avgP.isEmpty){
 	  val map = avgP.sum / avgP.length
       println("\nOverall Mean Average Precision: "+map)
     }
     
+    // Final time taken.
     val t3 = System.nanoTime()
     Main.debug("\nTime elapsed: "+(t3-t0)/1000000000.0+" s")
   }
 }
 
+/**
+ * The singleton containing the main method which parses
+ * any given parameters and sets those settings for the
+ * actual run.
+ */
 object Main  {
   
   var data_folder = "./tipster"
@@ -124,6 +136,10 @@ object Main  {
     new Mainx().run
   }
    
+  /**
+   * A method for loading the topics (with IDs) from the topics file.
+   * Expected to be called "topics" in the data_folder.
+   */
   def loadTopics : List[(String,Int)] = {
     val topics = Source.fromFile(data_folder+"/topics").getLines.filter(l => l.contains("<title>")).map(t => t.split(":").last.trim)
     val ids = Source.fromFile(data_folder+"/topics").getLines.filter(l => l.contains("<num>")).map(t => t.split(":").last.trim.toInt)
@@ -131,16 +147,32 @@ object Main  {
     topics.zip(ids).toList
   }
   
+  /**
+   * Prints the toString value of the given object to the std_out
+   * if the debug variable is set to true.
+   */
   def debug(obj : Any) = if(Main.debug_print) println(obj)
   
+  /**
+   * The ordering of a (DocID,Score) tuple.
+   */
   def ordering(row : (String,Double)) = -row._2
   
+  /**
+   * Extracts term frequencies for the words contained in the
+   * given document.
+   */
   def getTermFrequencies(doc : XMLDocument) : Map[String,Int] = {
 	doc.tokens.map(getStem(_)).groupBy(identity).mapValues(v => v.length)
   }
   
   // cache to reduce time stemming common words, cleared often to limit memory usage
   val stemCache : HashMap[String,String] = new HashMap[String,String]
+  
+  /**
+   * Retrieves the stem of the word if it has already been
+   * calculated, or calculated from scratch and cached.
+   */
   def getStem(word : String) : String = {
     if(stemCache.size > 500000) stemCache.clear
     

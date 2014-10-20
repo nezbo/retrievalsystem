@@ -8,9 +8,12 @@ import ch.ethz.dal.tinyir.io.ZipStream
 import ch.ethz.dal.tinyir.processing.XMLDocument
 import scala.collection.mutable.Queue
 
+/**
+ * Some helper methods for various parts of the process.
+ */
 object Utility {
   
-  def main(args : Array[String]) {
+/*  def main(args : Array[String]) {
     val inter = new PrecRecInterpolation(11)
     val result = inter.nAveragedPrecision((1 to 10), Set(2,3,6,8))
     println("\nResult: "+result)
@@ -23,8 +26,11 @@ object Utility {
     
     val result4 = inter.nAveragedPrecision((1 to 20), Set(21,22))
     println("\nResult: "+result4)
-  }
+  }*/
 
+/**
+ * My implementation of the interpolated precision calculation
+ */
 class PrecRecInterpolation(n : Int) {
   var levels:List[Double] = (0 to n-1).map(i => i/(n-1).toDouble).toList
   
@@ -71,7 +77,10 @@ class PrecRecInterpolation(n : Int) {
   }
 }
 
-// one file at a time
+/**
+ * A loader of the document zips. They need to be in the given
+ * dirpath, but can be in nested folders if wanted.
+ */
 class EmilParse(dirpath : String) {
   val ziplist = new File(dirpath).listFiles.filter(f => f.isDirectory())
   	.flatMap(f => f
@@ -89,9 +98,7 @@ class EmilParse(dirpath : String) {
       if(!queue.isEmpty){
         curZip = new ZipStream(queue(0)).stream.iterator
         queue = queue.drop(1).toList
-        //println("next file - "+queue.length+" more to go.")
       }else{
-        //println("no more files.")
         return null // done
       }
     }
